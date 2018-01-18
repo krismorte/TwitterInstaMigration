@@ -15,6 +15,12 @@ import com.towel.el.annotation.AnnotationResolver;
 import com.towel.swing.table.ObjectTableModel;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JScrollPane;
@@ -23,6 +29,7 @@ import org.brunocvcunha.instagram4j.Instagram4j;
 import org.brunocvcunha.instagram4j.requests.InstagramUserFeedRequest;
 import org.brunocvcunha.instagram4j.requests.payload.InstagramFeedItem;
 import org.brunocvcunha.instagram4j.requests.payload.InstagramFeedResult;
+import twitter4j.MediaEntity;
 import twitter4j.Status;
 import twitter4j.Twitter;
 
@@ -32,10 +39,11 @@ import twitter4j.Twitter;
  */
 public class MainScreen extends javax.swing.JFrame {
 
+    private final String DIR_IMAGE = "stream";
     private AnnotationResolver resolverTweet = new AnnotationResolver(Tweet.class);
-    private ObjectTableModel<Tweet> tableModelTweet = new ObjectTableModel<Tweet>(resolverTweet, "text,userName");
+    private ObjectTableModel<Tweet> tableModelTweet = new ObjectTableModel<Tweet>(resolverTweet, "image,text,userName");
     private AnnotationResolver resolverInsta = new AnnotationResolver(Post.class);
-    private ObjectTableModel<Post> tableModelPost = new ObjectTableModel<Post>(resolverInsta, "text,userName");
+    private ObjectTableModel<Post> tableModelPost = new ObjectTableModel<Post>(resolverInsta, "image,text,userName");
     private List<Tweet> tweets = new ArrayList<>();
     private List<Post> posts = new ArrayList<>();
     private JTable tableTweet;
@@ -109,7 +117,7 @@ public class MainScreen extends javax.swing.JFrame {
         );
         panelFeedLayout.setVerticalGroup(
             panelFeedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 250, Short.MAX_VALUE)
+            .addGap(0, 352, Short.MAX_VALUE)
         );
 
         btnTweet.setText("search tweet");
@@ -138,7 +146,7 @@ public class MainScreen extends javax.swing.JFrame {
                         .addComponent(btnTweet)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnInsta)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 110, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 321, Short.MAX_VALUE)
                         .addComponent(jButton1)))
                 .addContainerGap())
         );
@@ -162,7 +170,11 @@ public class MainScreen extends javax.swing.JFrame {
         try {
             twitter = (Twitter) twitterAccount.getAccountAccess().getConnection();
             for (Status status : twitter.timelines().getHomeTimeline()) {
-                tweets.add(new Tweet(status));
+                List<String> arquivos = new ArrayList<>();
+                if (status.getMediaEntities().length > 0) {
+                    arquivos = download(DIR_IMAGE, status);
+                }
+                tweets.add(new Tweet(status, arquivos));
             }
             showTweetTable(tweets);
         } catch (Exception ex) {
@@ -175,15 +187,90 @@ public class MainScreen extends javax.swing.JFrame {
             instagram = (Instagram4j) instaAccount.getAccountAccess().getConnection();
             InstagramFeedResult result = instagram.sendRequest(new InstagramUserFeedRequest(1761990178));
 
-            for (InstagramFeedItem item : result.getItems()) {
+            /*for (InstagramFeedItem item : result.getItems()) {
                 posts.add(new Post(item));
-            }
-
+            }*/
             showPostTable(posts);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }//GEN-LAST:event_btnInstaActionPerformed
+
+    private List<String> download(String directoryName, Status status) {
+
+        MediaEntity[] medias = status.getMediaEntities();
+        System.out.println("Total video " + medias.length);
+        List<String> path = new ArrayList<>();
+        if (medias.length > 0) {
+            File directory = createDirectoryIfNotExists(directoryName);
+            for (MediaEntity m : medias) {
+                try {
+                    /*System.out.println(m.getURL());
+                    System.out.println(m.getMediaURL());
+                    System.out.println(m.getMediaURLHttps());
+                    System.out.println(m.getExpandedURL());
+                    System.out.println(m.getType());*/
+                    URL url = new URL(m.getMediaURL());
+                    if (m.getVideoVariants().length > 0) {//is video
+                        for (MediaEntity.Variant v : m.getVideoVariants()) {
+                            url = new URL(v.getUrl());
+                        }
+                    }
+
+                    for (MediaEntity.Variant v : m.getVideoVariants()) {
+                        System.out.println("V: " + v.getUrl());
+                        System.out.println("V: " + v.getContentType());
+                    }
+
+                    //URL url = new URL(m.getMediaURL());
+                    InputStream in = new BufferedInputStream(url.openStream());
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    byte[] buf = new byte[1024];
+                    int n = 0;
+                    while (-1 != (n = in.read(buf))) {
+                        out.write(buf, 0, n);
+                    }
+                    out.close();
+                    in.close();
+                    byte[] response = out.toByteArray();
+                    String pathImage = directory.getAbsolutePath() + "\\" + m.getId() + "." + getExtension(m.getType());
+                    path.add(pathImage);
+                    FileOutputStream fos = new FileOutputStream(pathImage);
+                    fos.write(response);
+                    fos.close();
+                } catch (Exception ex) {
+                    System.err.println("Não consegui baixar a imagem");
+                    ex.printStackTrace();
+                }
+            }
+        }
+        return path;
+    }
+
+    private File createDirectoryIfNotExists(String directory) {
+        File file = new File(directory);
+        if (file.exists()) {
+            for (File child : file.listFiles()) {
+                child.delete();
+            }
+            return file;
+        } else {
+            file.mkdir();
+            return file;
+        }
+    }
+
+    private String getExtension(String type) {
+        if (type.equals("photo")) {
+            return "jpg";
+        } else if (type.equals("video")) {
+            return "mp4";
+        } else if (type.equals("animated_gif")) {
+            return "gif";
+        } else {
+            return "err";
+        }
+    }
 
     /**
      * @param args the command line arguments
@@ -230,6 +317,7 @@ public class MainScreen extends javax.swing.JFrame {
     private void showTweetTable(List<Tweet> tweets) {
         tableModelTweet.setData(tweets);
         tableTweet = new JTable(tableModelTweet);
+        tableTweet.setRowHeight(80);
         JScrollPane pane = new JScrollPane();
         pane.setViewportView(tableTweet);
         pane.setVisible(true);
@@ -243,12 +331,14 @@ public class MainScreen extends javax.swing.JFrame {
     }
 
     private void showPostTable(List<Post> posts) {
+
         tableModelPost.setData(posts);
         tablePost = new JTable(tableModelPost);
+        tablePost.setRowHeight(80);
         JScrollPane pane = new JScrollPane();
         pane.setViewportView(tablePost);
         pane.setVisible(true);
-        tablePost.setPreferredSize(new Dimension(400, 200));
+        tablePost.setPreferredSize(new Dimension(400, 400));
         tablePost.setVisible(true);
 
         panelFeed.removeAll();

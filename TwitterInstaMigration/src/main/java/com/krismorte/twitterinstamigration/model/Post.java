@@ -7,6 +7,8 @@ package com.krismorte.twitterinstamigration.model;
 
 import com.towel.el.annotation.Resolvable;
 import java.io.Serializable;
+import java.util.List;
+import javax.swing.Icon;
 import org.brunocvcunha.instagram4j.requests.payload.InstagramFeedItem;
 
 /**
@@ -15,20 +17,31 @@ import org.brunocvcunha.instagram4j.requests.payload.InstagramFeedItem;
  */
 public class Post implements Serializable {
 
+    private final String TEXT_KEY = "text=";
     private InstagramFeedItem item;
     @Resolvable(colName = "Text")
     private String text;
     @Resolvable(colName = "UserName")
     private String userName;
+    @Resolvable(colName = "Image")
+    private Icon image;
+    private List<String> arquivos;
 
     public Post() {
     }
-    
-    
-    public Post(InstagramFeedItem item) {
+
+    public Post(InstagramFeedItem item,List<String> arquivos) {
         this.item = item;
-        this.text = item.toString();
+        this.text = extractText(item.toString());
         this.userName = item.getUser().getUsername();
+        
+    }
+
+    private String extractText(String objectString) {
+        int indIni = objectString.indexOf(TEXT_KEY) + TEXT_KEY.length();
+        String textTmp = objectString.substring(indIni);
+        System.out.println("" + textTmp);
+        return textTmp.substring(0, textTmp.indexOf(","));
     }
 
     /**
@@ -58,7 +71,5 @@ public class Post implements Serializable {
     public void setUserName(String userName) {
         this.userName = userName;
     }
-    
-    
 
 }

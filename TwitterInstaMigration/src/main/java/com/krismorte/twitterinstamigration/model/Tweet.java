@@ -6,20 +6,17 @@
 package com.krismorte.twitterinstamigration.model;
 
 import com.towel.el.annotation.Resolvable;
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
 import java.io.Serializable;
-import java.util.Date;
-import java.util.Objects;
-import twitter4j.GeoLocation;
-import twitter4j.HashtagEntity;
-import twitter4j.MediaEntity;
-import twitter4j.Place;
-import twitter4j.RateLimitStatus;
-import twitter4j.Scopes;
+import java.util.List;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import twitter4j.Status;
-import twitter4j.SymbolEntity;
-import twitter4j.URLEntity;
-import twitter4j.User;
-import twitter4j.UserMentionEntity;
 
 /**
  *
@@ -32,14 +29,48 @@ public class Tweet implements Serializable {
     private String text;
     @Resolvable(colName = "UserName")
     private String userName;
+    @Resolvable(colName = "Image")
+    private Icon image;
+    private List<String> arquivos;
 
     public Tweet() {
     }
 
-    public Tweet(Status status) {
+    public Tweet(Status status, List<String> arquivos) {
         this.status = status;
         this.text = status.getText();
         this.userName = status.getUser().getName();
+        if (!arquivos.isEmpty()) {
+            Image image2 = Toolkit.getDefaultToolkit().getImage(arquivos.get(0));
+            image = new ImageIcon(createResizedCopy(image2, 80, 60, true));
+            //image = new ImageIcon(arquivos.get(0));
+        }
+    }
+
+    private BufferedImage createResizedCopy(Image originalImage,
+            int scaledWidth, int scaledHeight,
+            boolean preserveAlpha) {
+        System.out.println("resizing...");
+        int imageType = preserveAlpha ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
+        BufferedImage scaledBI = new BufferedImage(scaledWidth, scaledHeight, imageType);
+        Graphics2D g = scaledBI.createGraphics();
+        if (preserveAlpha) {
+            g.setComposite(AlphaComposite.Src);
+        }
+        g.drawImage(originalImage, 0, 0, scaledWidth, scaledHeight, null);
+        g.dispose();
+        return scaledBI;
+    }
+
+    private Image getScaledImage(Image srcImg, int w, int h) {
+        BufferedImage resizedImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = resizedImg.createGraphics();
+
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.drawImage(srcImg, 0, 0, w, h, null);
+        g2.dispose();
+
+        return resizedImg;
     }
 
     /**
@@ -69,5 +100,19 @@ public class Tweet implements Serializable {
     public void setUserName(String userName) {
         this.userName = userName;
     }
-   
+
+    /**
+     * @return the image
+     */
+    public Icon getImage() {
+        return image;
+    }
+
+    /**
+     * @param image the image to set
+     */
+    public void setImage(Icon image) {
+        this.image = image;
+    }
+
 }

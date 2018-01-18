@@ -18,7 +18,7 @@
         <dependency>
             <groupId>org.brunocvcunha.instagram4j</groupId>
             <artifactId>instagram4j</artifactId>
-            <version>1.5</version>
+            <version>1.6</version>
         </dependency>
                    
         <!-- https://mvnrepository.com/artifact/de.sciss/weblaf-core -->
