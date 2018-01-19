@@ -40,10 +40,11 @@ public class Tweet implements Serializable {
         this.status = status;
         this.text = status.getText();
         this.userName = status.getUser().getName();
+        this.arquivos = arquivos;
         if (!arquivos.isEmpty()) {
-            Image image2 = Toolkit.getDefaultToolkit().getImage(arquivos.get(0));
-            image = new ImageIcon(createResizedCopy(image2, 80, 60, true));
-            //image = new ImageIcon(arquivos.get(0));
+            //Image image2 = Toolkit.getDefaultToolkit().getImage(arquivos.get(0));
+            //image = new ImageIcon(createResizedCopy(image2, 80, 60, true));
+            image = new ImageIcon(arquivos.get(0));
         }
     }
 
@@ -115,4 +116,20 @@ public class Tweet implements Serializable {
         this.image = image;
     }
 
+    /**
+     * @return the arquivos
+     */
+    public List<String> getArquivos() {
+        return arquivos;
+    }
+
+    /**
+     * @param arquivos the arquivos to set
+     */
+    public void setArquivos(List<String> arquivos) {
+        this.arquivos = arquivos;
+    }
+
+    
+    
 }

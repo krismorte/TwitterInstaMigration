@@ -15,6 +15,8 @@ import com.towel.el.annotation.AnnotationResolver;
 import com.towel.swing.table.ObjectTableModel;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -205,11 +207,6 @@ public class MainScreen extends javax.swing.JFrame {
             File directory = createDirectoryIfNotExists(directoryName);
             for (MediaEntity m : medias) {
                 try {
-                    /*System.out.println(m.getURL());
-                    System.out.println(m.getMediaURL());
-                    System.out.println(m.getMediaURLHttps());
-                    System.out.println(m.getExpandedURL());
-                    System.out.println(m.getType());*/
                     URL url = new URL(m.getMediaURL());
                     if (m.getVideoVariants().length > 0) {//is video
                         for (MediaEntity.Variant v : m.getVideoVariants()) {
@@ -323,6 +320,16 @@ public class MainScreen extends javax.swing.JFrame {
         pane.setVisible(true);
         tableTweet.setPreferredSize(new Dimension(400, 200));
         tableTweet.setVisible(true);
+        tableTweet.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                super.mouseClicked(e); //To change body of generated methods, choose Tools | Templates.
+                if (e.getClickCount() > 1) {
+                    new TweetView(tableModelTweet.getValue(tableTweet.getSelectedRow()));
+                }
+            }
+
+        });
 
         panelFeed.removeAll();
         panelFeed.setLayout(new GridLayout(1, 1));
