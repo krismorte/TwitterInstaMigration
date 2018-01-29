@@ -13,10 +13,7 @@ import com.krismorte.twitterinstamigration.model.TwitterAccount;
 import com.krismorte.twitterinstamigration.model.TwitterAccountAccess;
 import com.towel.el.annotation.AnnotationResolver;
 import com.towel.swing.table.ObjectTableModel;
-import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -25,6 +22,9 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.UUID;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import org.brunocvcunha.instagram4j.Instagram4j;
@@ -83,8 +83,8 @@ public class MainScreen extends javax.swing.JFrame {
         instaAccount = new InstaAccount();
         instaAccount.setAccountAccess(instaAccess);
         TwitterAccountAccess twitterAccess = new TwitterAccountAccess();
-        twitterAccess.setAccessToken("704982112626208768-1YI46mKJELm3LNx9Dn16RN6QhLj0N5B");
-        twitterAccess.setAccessTokenSecret("kmSgQRjk3iPVha6JgfnyVQ68Kk2YAhO8olwBzWa89485h");
+        twitterAccess.setAccessToken("704982112626208768-ZlcXqzXKaLya2NuJyvI0M893XdAjVWI");
+        twitterAccess.setAccessTokenSecret("XFItrZ4sM7BKeEU9BzboVX61pzMrAlrDAu0Z946ZCrdxp");
         twitterAccess.setConsumerKey("mO4icXUBevZ6ORLBY3kpja42A");
         twitterAccess.setConsumerSecret("h7IwOOAFsTR9fCOnLawG4TNhOpZqYs9otW6tNFYioGadDFGkmS");
         twitterAccount = new TwitterAccount();
@@ -174,7 +174,7 @@ public class MainScreen extends javax.swing.JFrame {
             for (Status status : twitter.timelines().getHomeTimeline()) {
                 List<String> arquivos = new ArrayList<>();
                 if (status.getMediaEntities().length > 0) {
-                    arquivos = download(DIR_IMAGE, status);
+                    arquivos = downloadTweetStream(DIR_IMAGE, status);
                 }
                 tweets.add(new Tweet(status, arquivos));
             }
@@ -189,16 +189,35 @@ public class MainScreen extends javax.swing.JFrame {
             instagram = (Instagram4j) instaAccount.getAccountAccess().getConnection();
             InstagramFeedResult result = instagram.sendRequest(new InstagramUserFeedRequest(1761990178));
 
-            /*for (InstagramFeedItem item : result.getItems()) {
-                posts.add(new Post(item));
-            }*/
+            for (InstagramFeedItem item : result.getItems()) {
+                String resultSet = item.image_versions2.get("candidates").toString();
+                List<String> arquivosUrl = new ArrayList<>();
+                System.out.println("S: " + resultSet);
+                getUrl(resultSet, arquivosUrl);
+                List<String> arquivos = downloadInstaStream(DIR_IMAGE, arquivosUrl);
+                System.out.println("total: " + arquivosUrl.size());
+                posts.add(new Post(item, arquivos));
+            }
             showPostTable(posts);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }//GEN-LAST:event_btnInstaActionPerformed
 
-    private List<String> download(String directoryName, Status status) {
+    private boolean getUrl(String resultSet, List<String> arquivos) {
+        int indI = resultSet.indexOf("url=") + 1;
+        int indF = resultSet.indexOf("}");
+        if (indI <= 0) {
+            return false;
+        }
+        indI += 3;
+        String novoResultSet = resultSet.substring(indI, indF);
+        arquivos.add(novoResultSet);
+        System.out.println("R: " + novoResultSet);
+        return getUrl(novoResultSet, arquivos);
+    }
+
+    private List<String> downloadTweetStream(String directoryName, Status status) {
 
         MediaEntity[] medias = status.getMediaEntities();
         System.out.println("Total video " + medias.length);
@@ -219,7 +238,6 @@ public class MainScreen extends javax.swing.JFrame {
                         System.out.println("V: " + v.getContentType());
                     }
 
-                    //URL url = new URL(m.getMediaURL());
                     InputStream in = new BufferedInputStream(url.openStream());
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     byte[] buf = new byte[1024];
@@ -240,6 +258,42 @@ public class MainScreen extends javax.swing.JFrame {
                     ex.printStackTrace();
                 }
             }
+        }
+        return path;
+    }
+
+    private List<String> downloadInstaStream(String directoryName, List<String> arquivos) {
+
+        List<String> path = new ArrayList<>();
+        if (arquivos.size() > 0) {
+            File directory = createDirectoryIfNotExists(directoryName);
+            for (String arq : arquivos) {
+                try {
+                    int ind = arq.indexOf("?ig");
+                    String extensao = arq.substring(ind - 3, ind);
+                    System.out.println("x " + extensao);
+                    URL url = new URL(arq);
+                    InputStream in = new BufferedInputStream(url.openStream());
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    byte[] buf = new byte[1024];
+                    int n = 0;
+                    while (-1 != (n = in.read(buf))) {
+                        out.write(buf, 0, n);
+                    }
+                    out.close();
+                    in.close();
+                    byte[] response = out.toByteArray();
+                    String pathImage = directory.getAbsolutePath() + "\\" + UUID.randomUUID().toString() + "." + extensao;
+                    path.add(pathImage);
+                    FileOutputStream fos = new FileOutputStream(pathImage);
+                    fos.write(response);
+                    fos.close();
+                } catch (Exception ex) {
+                    System.err.println("Não consegui baixar a imagem");
+                    ex.printStackTrace();
+                }
+            }
+
         }
         return path;
     }
@@ -312,7 +366,19 @@ public class MainScreen extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
 
     private void showTweetTable(List<Tweet> tweets) {
-        tableModelTweet.setData(tweets);
+
+        panelFeed.removeAll();
+        panelFeed.setLayout(new GridLayout(1, 1));
+        JPanel panel = new JPanel(new GridLayout(tweets.size(), 1));
+        for (Tweet t : tweets) {
+            panel.add(new PanelStatus(t));
+        }
+        JScrollPane scroll = new JScrollPane();
+        scroll.setViewportView(panel);
+        panelFeed.add(scroll);
+        panelFeed.validate();
+
+        /*tableModelTweet.setData(tweets);
         tableTweet = new JTable(tableModelTweet);
         tableTweet.setRowHeight(80);
         JScrollPane pane = new JScrollPane();
@@ -334,12 +400,23 @@ public class MainScreen extends javax.swing.JFrame {
         panelFeed.removeAll();
         panelFeed.setLayout(new GridLayout(1, 1));
         panelFeed.add(pane);
-        panelFeed.validate();
+        panelFeed.validate();*/
     }
 
     private void showPostTable(List<Post> posts) {
 
-        tableModelPost.setData(posts);
+        panelFeed.removeAll();
+        panelFeed.setLayout(new GridLayout(1, 1));
+        JPanel panel = new JPanel(new GridLayout(posts.size(), 1));
+        for (Post p : posts) {
+            panel.add(new PanelStatus(p));
+        }
+        JScrollPane scroll = new JScrollPane();
+        scroll.setViewportView(panel);
+        panelFeed.add(scroll);
+        panelFeed.validate();
+
+        /*tableModelPost.setData(posts);
         tablePost = new JTable(tableModelPost);
         tablePost.setRowHeight(80);
         JScrollPane pane = new JScrollPane();
@@ -351,7 +428,7 @@ public class MainScreen extends javax.swing.JFrame {
         panelFeed.removeAll();
         panelFeed.setLayout(new GridLayout(1, 1));
         panelFeed.add(pane);
-        panelFeed.validate();
+        panelFeed.validate();*/
     }
 
 }

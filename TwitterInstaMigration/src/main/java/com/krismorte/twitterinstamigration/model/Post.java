@@ -34,6 +34,7 @@ public class Post implements Serializable {
         this.item = item;
         this.text = extractText(item.toString());
         this.userName = item.getUser().getUsername();
+        this.arquivos = arquivos;
         
     }
 
@@ -70,6 +71,20 @@ public class Post implements Serializable {
      */
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    /**
+     * @return the arquivos
+     */
+    public List<String> getArquivos() {
+        return arquivos;
+    }
+
+    /**
+     * @param arquivos the arquivos to set
+     */
+    public void setArquivos(List<String> arquivos) {
+        this.arquivos = arquivos;
     }
 
 }
