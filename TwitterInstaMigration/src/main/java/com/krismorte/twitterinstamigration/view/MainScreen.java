@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.UUID;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -300,15 +299,11 @@ public class MainScreen extends javax.swing.JFrame {
 
     private File createDirectoryIfNotExists(String directory) {
         File file = new File(directory);
-        if (file.exists()) {
-            for (File child : file.listFiles()) {
-                child.delete();
-            }
-            return file;
-        } else {
+        if (!file.exists()) {
             file.mkdir();
-            return file;
+
         }
+        return file;
     }
 
     private String getExtension(String type) {

@@ -23,6 +23,7 @@ public class PanelStatus extends javax.swing.JPanel {
         txtUser.setText(tweet.getUserName());
         txtText.setText(tweet.getText());
         if (!tweet.getArquivos().isEmpty()) {
+            System.out.println("FilePath: "+tweet.getArquivos().get(0));
             showImage(tweet.getArquivos().get(0));
         }
 
@@ -33,6 +34,7 @@ public class PanelStatus extends javax.swing.JPanel {
         txtUser.setText(post.getUserName());
         txtText.setText(post.getText());
         if (!post.getArquivos().isEmpty()) {
+            System.out.println("FilePath: "+post.getArquivos().get(0));
             showImage(post.getArquivos().get(0));
         }
     }
